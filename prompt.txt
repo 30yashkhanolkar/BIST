@@ -1,1 +1,1 @@
-“Complete the implementation in sources/bist.sv.”
+“The file situated inside sources folder of this BIST_baseline branch contains only the module headings of the built in self test process. This contains modules such as comparators, multiplexers, counters, controller, decoder and the bist itself as the main module. This is just the skeletal code which is setup just to fail in front of the golden file. This is the implementation of sources/bist.sv  ”
