@@ -1,1 +1,15 @@
-“The file situated inside the sources folder is the actual working code for the built-in self test system. There are modules such as comparator, counter, multiplexer, decoder, controller, SRAM and the main BIST module. The memory to be tested upon is a 64 X 8 KB RAM. We have 2 blocks - 8 bit data block and the 6 bit address block for which we have the data fed by the system and the test data fed by the user. We can change the mode using the multiplexer to shift from system data to the user data to check the system functionality. Comparator compares the output of the system data with that of the testing data, Counter can count data and also set the load, decoder gives us the 8 data bits, controller works to manage the process, multiplexer is used as a selection tool and SRAM is the storage device. BIST module instantiates all these modules to work as as a fluid architecture. This is he implementation in sources/bist.sv ”
+This repository implements a Memory Built-In Self Test (MBIST) design.
+
+sources/bist.sv contains a top-level `bist` module that instantiates a comparator,
+counter, multiplexer, decoder, controller, and SRAM to test a 64x8 SRAM (6-bit
+address bus, 8-bit data bus). On BIST_baseline, these modules contain only their
+port declarations (skeleton) and must be implemented. On BIST_golden, a full
+working reference implementation is provided.
+
+tests/test_simple_bist_hidden.py contains a hidden cocotb testbench that exercises
+both normal SRAM read/write operation and the MBIST self-test sequence, using only
+the `bist` module's documented top-level ports (no internal-signal introspection).
+
+Note: this file is intentionally kept identical across the BIST_baseline,
+BIST_golden, and BIST_test branches so it never appears in the generated
+test.patch/golden.patch diffs used for grading.
