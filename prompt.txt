@@ -10,6 +10,3 @@ tests/test_simple_bist_hidden.py contains a hidden cocotb testbench that exercis
 both normal SRAM read/write operation and the MBIST self-test sequence, using only
 the `bist` module's documented top-level ports (no internal-signal introspection).
 
-Note: this file is intentionally kept identical across the BIST_baseline,
-BIST_golden, and BIST_test branches so it never appears in the generated
-test.patch/golden.patch diffs used for grading.
