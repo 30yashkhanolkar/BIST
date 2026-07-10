@@ -17,6 +17,45 @@ LANGUAGE = os.getenv("HDL_TOPLEVEL_LANG", "verilog").lower().strip()
 # fast to simulate.
 SELF_TEST_CYCLES = 2000
 
+# Normal-mode writes/reads don't have to be single-cycle-latency -- a
+# fully-registered-output SRAM (address register, then a separate output
+# register) is just as valid a design as a same-cycle combinational read
+# from a registered address. We give a small, bounded window for either
+# convention to settle, rather than demanding one specific pipeline depth.
+WRITE_SETTLE_CYCLES = 2
+READ_LATENCY_CYCLES = 3
+
+
+async def _write(dut, address, data):
+    dut.csin.value = 1
+    dut.rwbarin.value = 0
+    dut.address.value = address
+    dut.datain.value = data
+    for _ in range(WRITE_SETTLE_CYCLES):
+        await RisingEdge(dut.clk)
+
+
+async def _read_and_check(dut, address, expected, message):
+    dut.csin.value = 1
+    dut.rwbarin.value = 1
+    dut.address.value = address
+    for _ in range(READ_LATENCY_CYCLES):
+        await RisingEdge(dut.clk)
+        try:
+            value = int(dut.dataout.value)
+        except ValueError:
+            continue
+        if value == expected:
+            return
+    try:
+        actual_str = hex(int(dut.dataout.value))
+    except ValueError:
+        actual_str = str(dut.dataout.value)
+    assert False, (
+        f"{message}: expected {hex(expected)}, got {actual_str} within "
+        f"{READ_LATENCY_CYCLES} cycles of the read being issued"
+    )
+
 
 @cocotb.test()
 async def bist_test(dut):
@@ -38,26 +77,13 @@ async def bist_test(dut):
 
     dut.rst.value = 0
 
-    # NORMAL SRAM WRITE
-    dut.csin.value = 1
-    dut.rwbarin.value = 0
-    dut.address.value = 5
-    dut.datain.value = 0xA5
-    await RisingEdge(dut.clk)
-
-    # NORMAL SRAM READ
-    dut.rwbarin.value = 1
-    await RisingEdge(dut.clk)
-    assert int(dut.dataout.value) == 0xA5, f"Expected 0xA5, got {hex(int(dut.dataout.value))}"
+    # NORMAL SRAM WRITE + READ
+    await _write(dut, 5, 0xA5)
+    await _read_and_check(dut, 5, 0xA5, "Normal-mode read after write to address 5")
 
     # Write another location
-    dut.rwbarin.value = 0
-    dut.address.value = 12
-    dut.datain.value = 0x3C
-    await RisingEdge(dut.clk)
-    dut.rwbarin.value = 1
-    await RisingEdge(dut.clk)
-    assert int(dut.dataout.value) == 0x3C
+    await _write(dut, 12, 0x3C)
+    await _read_and_check(dut, 12, 0x3C, "Normal-mode read after write to address 12")
 
     # Enter MBIST mode
     dut.start.value = 1
@@ -74,16 +100,9 @@ async def bist_test(dut):
     # Once the self-test sweep has finished, normal-mode access must work
     # correctly again -- this catches designs that never release control
     # back to the external interface (or leave stale BIST state behind).
-    dut.csin.value = 1
-    dut.rwbarin.value = 0
-    dut.address.value = 30
-    dut.datain.value = 0x7E
-    await RisingEdge(dut.clk)
-    dut.rwbarin.value = 1
-    await RisingEdge(dut.clk)
-    assert int(dut.dataout.value) == 0x7E, (
-        f"Normal-mode read after self-test completed did not return the "
-        f"written value: expected 0x7E, got {hex(int(dut.dataout.value))}"
+    await _write(dut, 30, 0x7E)
+    await _read_and_check(
+        dut, 30, 0x7E, "Normal-mode read after self-test completed"
     )
 
 
