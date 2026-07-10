@@ -7,6 +7,11 @@
 //   - csin/rwbarin/address/datain drive a normal synchronous read/write
 //     of the module's internal memory, like a plain single-port SRAM.
 //   - dataout reflects the memory's read data.
+//   - Timing: if a location is written on one clock edge, asserting
+//     csin=1/rwbarin=1 with that same address must make dataout reflect
+//     the written value no later than the very next clock edge (i.e. a
+//     standard registered-address synchronous SRAM read, at most one
+//     cycle of latency).
 //
 // Self-test mode (triggered by a `start` pulse):
 //   - The module must autonomously sweep every address of its internal
